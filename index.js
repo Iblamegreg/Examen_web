@@ -12,7 +12,7 @@ conectarDB()
 app.get('/', (req, res) => {
     res.status(200).json({
         msg: 'Bienvenido a TaDa.',
-        description: "Para acceder a todas nuestras promociones, regístrate y descubre todo lo que tenemos para ti." // CAMBIO: tilde
+        description: "Para acceder a todas nuestras promociones, regístrate y descubre todo lo que tenemos para ti."
     })
 })
 
