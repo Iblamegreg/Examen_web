@@ -1,0 +1,130 @@
+import express from "express"
+import {conectarDB, Usuario} from "./database.js"
+
+const app = express()
+const port = 3000
+
+app.use(express.json())
+
+// conectar a mongodb
+conectarDB()
+
+app.get('/', (req, res) => {
+    res.status(200).json({
+        msg: 'Bienvenido a TaDa.',
+        description: "Para acceder a todas nuestras promociones, regístrate y descubre todo lo que tenemos para ti." // CAMBIO: tilde
+    })
+})
+
+// Registro de usuarios
+app.post('/register', async (req, res) => {
+
+    try {
+
+        const {
+            imagen,
+            nombre,
+            apellido,
+            direccion,
+            celular,
+            correo,
+            password,
+            contraseña,
+            fechaNacimiento
+        } = req.body
+
+        // Aceptar contraseña o password
+        const clave = password || contraseña;
+
+        // validar campos vacios
+        if (!imagen || !nombre || !apellido || !direccion || !celular || !correo || !clave) {
+
+            return res.status(400).json({
+                msg: "Lo sentimos, debes llenar todos los campos"
+            })
+        }
+
+        // validar contraseña
+        if (String(clave).length <= 8 || !String(clave).includes('$')) {
+
+            return res.status(400).json({
+                msg: "La contraseña debe tener más de 8 caracteres y contener el carácter especial $"
+            })
+        }
+
+        // validar celular 
+        if (!/^\d{10}$/.test(String(celular))) {
+
+            return res.status(400).json({
+                msg: "El celular debe contener exactamente 10 dígitos"
+            })
+        }
+
+        // validar correo repetido
+        const usuarioExiste = await Usuario.findOne({correo});
+
+        if (usuarioExiste) {
+
+            return res.status(400).json({
+                msg: "El correo ya se encuentra registrado"
+            })
+        }
+
+        // registrar usuario
+        const nuevoUsuario = new Usuario({
+            imagen,
+            nombre,
+            apellido,
+            direccion,
+            celular: String(celular),
+            correo,
+            password: clave,
+            fechaNacimiento: fechaNacimiento || Date.now()
+        })
+
+        await nuevoUsuario.save()
+        res.status(201).json({
+            msg: "Usuario registrado correctamente",
+            usuario: nuevoUsuario
+        })
+
+    } catch (error) {
+
+        res.status(500).json({
+            msg: "Error al registrar usuario"
+        })
+
+    }
+
+})
+
+// Middleware
+const verificarToken = (req, res, next) => {
+
+    const token = req.headers.token
+
+    if (!token) {
+        return res.status(404).json({
+            msg: "Token no proporcionado"
+        })
+    }
+
+    if (token !== "abcd5743") {
+        return res.status(401).json({
+            msg: "Acceso denegado"
+        })
+    }
+
+    next()
+}
+
+// Ruta protegida
+app.get("/promo-tada", verificarToken, (req, res) => {
+    res.status(200).json({
+        msg: "Aplica a los siguientes cupones de descuento"
+    })
+})
+
+app.listen(port, () => {
+    console.log(`Servidor ejecutándose en http://localhost:${port}`);
+})
